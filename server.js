@@ -6,7 +6,7 @@ app.set('port', process.env.PORT || 8080);
 app.use('/data', express.static('data'))
 app.use('/dist', express.static('dist'))
 
-app.get("loaderio-a5506a3993266385965d138c3f1ba8cb.txt", function(req, res) {
+app.get("/loaderio-a5506a3993266385965d138c3f1ba8cb.txt", function(req, res) {
   res.sendFile(path.join(__dirname, "loaderio-a5506a3993266385965d138c3f1ba8cb.txt"));
 });
 
