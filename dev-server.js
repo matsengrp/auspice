@@ -18,6 +18,10 @@ app.use(require("webpack-dev-middleware")(compiler, {
 
 app.use(require("webpack-hot-middleware")(compiler));
 
+app.get("/loaderio-a5506a3993266385965d138c3f1ba8cb.txt", function(req, res) {
+  res.sendFile(path.join(__dirname, "loaderio-a5506a3993266385965d138c3f1ba8cb.txt"));
+});
+
 app.get("*", function(req, res) {
   res.sendFile(path.join(__dirname, "index.html"));
 });
