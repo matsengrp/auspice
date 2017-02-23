@@ -1,9 +1,10 @@
 var path = require("path");
 var express = require("express");
+var expressStaticGzip = require("express-static-gzip");
 
 var app = express();
 app.set('port', process.env.PORT || 8080);
-app.use('/data', express.static('data'))
+app.use("/dist", expressStaticGzip("dist"));
 app.use('/dist', express.static('dist'))
 
 app.get("/loaderio-a5506a3993266385965d138c3f1ba8cb.txt", function(req, res) {
