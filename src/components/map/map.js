@@ -130,9 +130,7 @@ class Map extends React.Component {
       // this.props.datasetGuid !== nextProps.datasetGuid // and the dataset has changed
     */
     if (
-      this.props.colorBy !== nextProps.colorBy &&// prevProps.colorBy !== /*  */
-      this.props.metadata &&
-      this.props.metadata.geo[nextProps.colorBy]
+      this.props.colorBy !== nextProps.colorBy // prevProps.colorBy !== /*  */
     ) {
       this.state.d3DOMNode.selectAll("*").remove();
 
@@ -149,18 +147,20 @@ class Map extends React.Component {
       this.props.colorScale &&
       this.state.map && /* we have already drawn the map */
       this.props.metadata && /* we have the data we need */
-      this.props.metadata.geo[this.props.colorScale.colorBy] &&
       this.props.nodes &&
       this.state.responsive &&
       this.state.d3DOMNode &&
       !this.state.tips && /* we haven't already drawn tips */
       (this.props.colorScale.version !== prevProps.colorScale.version)
     ) {
-
+      let cScale = this.props.colorScale.scale;
+      if (!this.props.metadata.geo[this.props.colorScale.colorBy]){
+        cScale = function(d){return "#555";};  // use grey as node color if colorscale is not-geo
+      }
       const latLongs = this.latLongs(); /* no reference stored, we recompute this for now rather than updating in place */
       const d3elems = drawTipsAndTransmissions(
         latLongs,
-        this.props.colorScale.scale,
+        cScale,
         this.state.d3DOMNode,
         this.state.map,
       );
@@ -217,7 +217,8 @@ class Map extends React.Component {
       this.props.nodes,
       this.props.metadata,
       this.state.map,
-      this.props.colorBy
+      // check whether colorscale is geo, otherwise use first geo prop. Should first check for previous.
+      (this.props.metadata.geo[this.props.colorBy]) ? this.props.colorBy : Object.keys(this.props.metadata.geo)[0]
     );
   }
   createMap() {
