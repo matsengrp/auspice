@@ -16,7 +16,7 @@ import getLatLongs from "../../util/mapHelpersLatLong";
 
 @connect((state) => {
   return {
-    tree: state.tree.tree,
+    datasetGuid: state.tree.datasetGuid,
     nodes: state.tree.nodes,
     metadata: state.metadata.metadata,
     browserDimensions: state.browserDimensions.browserDimensions,
@@ -41,12 +41,40 @@ class Map extends React.Component {
     colorScale: React.PropTypes.object.isRequired
   }
   componentWillMount() {
-    setupLeaflet(); /* this sets up window.L */
+    if (!window.L) {
+      setupLeaflet(); /* this sets up window.L */
+    }
   }
   componentDidMount() {
-    setupLeafletPlugins(); /* this attaches several properties to window.L */
+    /*
+      this attaches several properties to window.L
+      it's a bit of a hack, but it's a code execution order problem and it works fine.
+    */
+    setupLeafletPlugins();
   }
   componentWillReceiveProps(nextProps) {
+    this.maybeComputeResponive(nextProps);
+    this.maybeRemoveAllTipsAndTransmissions(nextProps); /* dataset or colorby just changed, this change is upstream of maybeDraw */
+  }
+  componentDidUpdate(prevProps, prevState) {
+    this.maybeCreateLeafletMap(); /* puts leaflet in the DOM, only done once */
+    this.maybeSetupD3DOMNode(); /* attaches the D3 SVG DOM node to the Leaflet DOM node, only done once */
+    this.maybeDrawTipsAndTransmissions(prevProps); /* it's the first time, or they were just removed because we changed dataset or colorby */
+    this.maybeUpdateTipsAndTransmissions(); /* every time we change something like colorBy */
+    this.maybeAnimateTipsAndTransmissions();
+  }
+  maybeCreateLeafletMap() {
+    /* first time map, this sets up leaflet */
+    if (
+      this.props.browserDimensions &&
+      this.props.metadata &&
+      !this.state.map &&
+      document.getElementById("map")
+    ) {
+      this.createMap();
+    }
+  }
+  maybeComputeResponive(nextProps) {
     /*
       React to browser width/height changes responsively
       This is stored in state because it's used by both the map and the d3 overlay
@@ -57,44 +85,27 @@ class Map extends React.Component {
       (this.props.browserDimensions.width !== nextProps.browserDimensions.width ||
       this.props.browserDimensions.height !== nextProps.browserDimensions.height)
     ) {
-      const responsive = computeResponsive({
-        horizontal: nextProps.browserDimensions.width > globals.twoColumnBreakpoint ? .5 : 1,
-        vertical: .75, /* if we are in single column, full height */
-        browserDimensions: nextProps.browserDimensions,
-        sidebar: nextProps.sidebar,
-        minHeight: 400,
-        maxAspectRatio: 1.3,
-      })
-      this.setState({responsive})
+      this.setState({responsive: this.doComputeResponsive(nextProps)});
     } else if (!this.props.browserDimensions && nextProps.browserDimensions) { /* first time */
-      const responsive = computeResponsive({
-        horizontal: nextProps.browserDimensions.width > globals.twoColumnBreakpoint ? .5 : 1,
-        vertical: .75, /* if we are in single column, full height */
-        browserDimensions: nextProps.browserDimensions,
-        sidebar: nextProps.sidebar,
-        minHeight: 400,
-        maxAspectRatio: 1.3,
-      })
-      this.setState({responsive})
-    }
-  }
-  componentDidUpdate(prevProps, prevState) {
-    this.maybeSetupLeaflet(); /* puts leaflet in the DOM, only done once */
-    this.maybeSetupD3DOMNode(); /* attaches the D3 SVG DOM node to the Leaflet DOM node, only done once */
-    this.maybeDrawTipsAndTransmissions(prevProps); /* it's the first time, or they were just removed because we changed dataset */
-    this.maybeUpdateTipsAndTransmissions(); /* every time we change something like colorBy */
-    this.maybeAnimateTipsAndTransmissions();
-    this.maybeRemoveAllTipsAndTransmissions(prevProps); /* dataset just changed */
-  }
-  maybeSetupLeaflet() {
-    /* first time map, this sets up leaflet */
-    if (
+      this.setState({responsive: this.doComputeResponsive(nextProps)});
+    } else if (
       this.props.browserDimensions &&
-      this.props.metadata &&
-      !this.state.map
+      this.props.datasetGuid &&
+      nextProps.datasetGuid &&
+      this.props.datasetGuid !== nextProps.datasetGuid // the dataset has changed
     ) {
-      this.createMap();
+      this.setState({responsive: this.doComputeResponsive(nextProps)});
     }
+  }
+  doComputeResponsive(nextProps) {
+    return computeResponsive({
+      horizontal: nextProps.browserDimensions.width > globals.twoColumnBreakpoint ? .5 : 1,
+      vertical: .75, /* if we are in single column, full height */
+      browserDimensions: nextProps.browserDimensions,
+      sidebar: nextProps.sidebar,
+      minHeight: 400,
+      maxAspectRatio: 1.3,
+    })
   }
   maybeSetupD3DOMNode() {
     if (
@@ -106,6 +117,31 @@ class Map extends React.Component {
       this.setState({d3DOMNode});
     }
   }
+  maybeRemoveAllTipsAndTransmissions(nextProps) {
+    /*
+      xx dataset change, remove all tips and transmissions d3 added
+      xx we could also make this smoother: http://bl.ocks.org/alansmithy/e984477a741bc56db5a5
+      THE ABOVE IS NO LONGER TRUE: while App remounts, this is all getting nuked, so it doesn't matter.
+      Here's what we were doing and might do again:
+
+      // this.state.map && // we have a map
+      // this.props.datasetGuid &&
+      // nextProps.datasetGuid &&
+      // this.props.datasetGuid !== nextProps.datasetGuid // and the dataset has changed
+    */
+    if (
+      this.props.colorBy !== nextProps.colorBy // prevProps.colorBy !== /*  */
+    ) {
+      this.state.d3DOMNode.selectAll("*").remove();
+
+      /* clear references to the tips and transmissions d3 added */
+      this.setState({
+        tips: false,
+        d3elems: null,
+        latLongs: null,
+      })
+    }
+  }
   maybeDrawTipsAndTransmissions(prevProps) {
     if (
       this.props.colorScale &&
@@ -114,10 +150,9 @@ class Map extends React.Component {
       this.props.nodes &&
       this.state.responsive &&
       this.state.d3DOMNode &&
-      // !this.state.tips /* we haven't already drawn tips */
+      !this.state.tips && /* we haven't already drawn tips */
       (this.props.colorScale.version !== prevProps.colorScale.version)
     ) {
-      console.log("maybeDrawTipsAndTransmissions hit")
       /* data structures to feed to d3 latLongs = { tips: [{}, {}], transmissions: [{}, {}] } */
 
       if (!this.state.tips){ //we are doing the initial render -> set map to the range of the data
@@ -175,27 +210,6 @@ class Map extends React.Component {
   maybeAnimateTipsAndTransmissions() {
     /* todo */
   }
-  maybeRemoveAllTipsAndTransmissions(prevProps) {
-    /*
-      dataset change, remove all tips and transmissions d3 added
-      we could also make this smoother: http://bl.ocks.org/alansmithy/e984477a741bc56db5a5
-    */
-    if (
-      this.state.map && // we have a map
-      prevProps.datasetGuid &&
-      this.props.datasetGuid &&
-      prevProps.datasetGuid !== this.props.datasetGuid // and the dataset has changed
-    ) {
-      this.state.d3DOMNode.selectAll("*").remove();
-
-      /* clear references to the tips and transmissions d3 added */
-      this.setState({
-        tips: false,
-        d3elems: null,
-        latLongs: null,
-      })
-    }
-  }
   latLongs() {
     return getLatLongs(
       this.props.nodes,
@@ -205,6 +219,7 @@ class Map extends React.Component {
     );
   }
   createMap() {
+
     /******************************************
     * GET LEAFLET IN THE DOM
     *****************************************/
@@ -262,32 +277,45 @@ class Map extends React.Component {
 
     this.setState({map});
   }
-  createMapDiv() {
+  maybeCreateMapDiv() {
     // onClick={this.handleAnimationPlayClicked.bind(this) }
-    return (
-      <div style={{position: "relative"}}>
-        <button style={{
-            position: "absolute",
-            left: 25,
-            top: 25,
-            zIndex: 9999,
-            border: "none",
-            padding: 15,
-            borderRadius: 4,
-            backgroundColor: "rgb(124, 184, 121)",
-            fontWeight: 700,
-            color: "white"
-          }}
-          >
-          Play
-        </button>
-        <div style={{
-            height: this.state.responsive.height,
-            width: this.state.responsive.width
-          }} id="map">
+    let container = null;
+
+    console.log('create map div', this.props.browserDimensions, this.state.responsive)
+
+    if (
+      this.props.browserDimensions &&
+      this.state.responsive
+    ) {
+
+      container = (
+        <div style={{position: "relative"}}>
+          <button style={{
+              position: "absolute",
+              left: 25,
+              top: 25,
+              zIndex: 9999,
+              border: "none",
+              padding: 15,
+              borderRadius: 4,
+              backgroundColor: "rgb(124, 184, 121)",
+              fontWeight: 700,
+              color: "white"
+            }}
+            >
+            Play
+          </button>
+          <div style={{
+              height: this.state.responsive.height,
+              width: this.state.responsive.width
+            }} id="map">
+          </div>
         </div>
-      </div>
-    )
+      )
+    }
+
+
+    return container;
   }
   // handleAnimationPlayClicked() {
   //   /******************************************
@@ -323,7 +351,7 @@ class Map extends React.Component {
     // clear layers - store all markers in map state https://github.com/Leaflet/Leaflet/issues/3238#issuecomment-77061011
     return (
       <Card center title="Transmissions">
-        {this.props.browserDimensions ? this.createMapDiv() : "Loading"}
+        {this.maybeCreateMapDiv()}
       </Card>
     );
   }
