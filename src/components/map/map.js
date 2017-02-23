@@ -130,7 +130,9 @@ class Map extends React.Component {
       // this.props.datasetGuid !== nextProps.datasetGuid // and the dataset has changed
     */
     if (
-      this.props.colorBy !== nextProps.colorBy // prevProps.colorBy !== /*  */
+      this.props.colorBy !== nextProps.colorBy &&// prevProps.colorBy !== /*  */
+      this.props.metadata &&
+      this.props.metadata.geo[nextProps.colorBy]
     ) {
       this.state.d3DOMNode.selectAll("*").remove();
 
@@ -147,18 +149,13 @@ class Map extends React.Component {
       this.props.colorScale &&
       this.state.map && /* we have already drawn the map */
       this.props.metadata && /* we have the data we need */
+      this.props.metadata.geo[this.props.colorScale.colorBy] &&
       this.props.nodes &&
       this.state.responsive &&
       this.state.d3DOMNode &&
       !this.state.tips && /* we haven't already drawn tips */
       (this.props.colorScale.version !== prevProps.colorScale.version)
     ) {
-      /* data structures to feed to d3 latLongs = { tips: [{}, {}], transmissions: [{}, {}] } */
-
-      if (!this.state.tips){ //we are doing the initial render -> set map to the range of the data
-        const SWNE = this.getGeoRange();
-        this.state.map.fitBounds(L.latLngBounds(SWNE[0], SWNE[1]));
-      }
 
       const latLongs = this.latLongs(); /* no reference stored, we recompute this for now rather than updating in place */
       const d3elems = drawTipsAndTransmissions(
@@ -167,6 +164,11 @@ class Map extends React.Component {
         this.state.d3DOMNode,
         this.state.map,
       );
+      /* data structures to feed to d3 latLongs = { tips: [{}, {}], transmissions: [{}, {}] } */
+      if (!this.state.tips){ //we are doing the initial render -> set map to the range of the data
+        const SWNE = this.getGeoRange();
+        this.state.map.fitBounds(L.latLngBounds(SWNE[0], SWNE[1]));
+      }
       // this.state.map.on("viewreset", this.respondToLeafletEvent.bind(this));
       this.state.map.on("moveend", this.respondToLeafletEvent.bind(this));
 
