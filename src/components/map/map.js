@@ -119,8 +119,13 @@ class Map extends React.Component {
     ) {
       console.log("maybeDrawTipsAndTransmissions hit")
       /* data structures to feed to d3 latLongs = { tips: [{}, {}], transmissions: [{}, {}] } */
-      const latLongs = this.latLongs(); /* no reference stored, we recompute this for now rather than updating in place */
 
+      if (!this.state.tips){ //we are doing the initial render -> set map to the range of the data
+        const SWNE = this.getGeoRange();
+        this.state.map.fitBounds(L.latLngBounds(SWNE[0], SWNE[1]));
+      }
+
+      const latLongs = this.latLongs(); /* no reference stored, we recompute this for now rather than updating in place */
       const d3elems = drawTipsAndTransmissions(
         latLongs,
         this.props.colorScale.scale,
@@ -142,6 +147,28 @@ class Map extends React.Component {
       updateOnMoveEnd(this.state.d3elems, this.latLongs());
     }
   }
+  getGeoRange() {
+    const latitudes = [];
+    const longitudes = [];
+    for (let k in this.props.metadata.geo){
+      for (let c in this.props.metadata.geo[k]){
+        latitudes.push(this.props.metadata.geo[k][c].latitude);
+        longitudes.push(this.props.metadata.geo[k][c].longitude);
+      }
+    }
+    const maxLat = d3.max(latitudes);
+    const minLat = d3.min(latitudes);
+    const maxLng = d3.max(longitudes);
+    const minLng = d3.min(longitudes);
+    const lngRange = (maxLng - minLng)%360;
+    const latRange = (maxLat - minLat);
+    const south = Math.max(-80, minLat - latRange*0.2);
+    const north = Math.min(80, maxLat + latRange*0.2);
+    const east = Math.max(-180, minLng - lngRange*0.2);
+    const west = Math.min(180, maxLng + lngRange*0.2);
+    return [L.latLng(south,west), L.latLng(north, east)];
+  }
+
   maybeUpdateTipsAndTransmissions() {
     /* todo */
   }
@@ -181,9 +208,10 @@ class Map extends React.Component {
     /******************************************
     * GET LEAFLET IN THE DOM
     *****************************************/
-
+    console.log("createMap", this.props.nodes);
     const southWest = L.latLng(-70, -180);
     const northEast = L.latLng(80, 180);
+    console.log(southWest, northEast);
     const bounds = L.latLngBounds(southWest, northEast);
     let zoom = 2;
     let center = [0,0];
