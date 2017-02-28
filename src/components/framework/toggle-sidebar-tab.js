@@ -15,7 +15,7 @@ const ToggleSidebarTab = ({open, handler}) => {
         position: "fixed",
         top: 0,
         zIndex: 1001,
-        backgroundColor: "#4b4e4e",
+        backgroundColor: "#7d8282",
         cursor: "pointer",
         left: open ? "auto" : 0,
         right: open ? 0 : "auto"

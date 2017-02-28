@@ -32,13 +32,13 @@ class TitleBar extends React.Component {
         paddingRight: "8px",
         paddingTop: "20px",
         paddingBottom: "20px",
-        color: "#fff",
+        color: darkGrey,
         textDecoration: "none",
         fontSize: this.props.minified ? 12 : 16
       },
       title: {
         padding: "0px",
-        color: "#fff",
+        color: darkGrey,
         textDecoration: "none",
         fontSize: 20,
         fontWeight: 400
@@ -47,17 +47,17 @@ class TitleBar extends React.Component {
         height: titleBarHeight,
         justifyContent: "space-between",
         alignItems: "center",
-        background: "#4b4e4e",
+        background: "#eaebeb",
         marginBottom: 5,
-        boxShadow: "1px 1px 2px 1px rgba(215,215,215,0.85)",
-        overflow: "hidden"
+        overflow: "hidden",
+        // boxShadow: "1px 1px 2px 1px rgba(200,200,200,0.85)"
       },
       link: {
         paddingLeft: this.props.minified ? "6px" : "12px",
         paddingRight: this.props.minified ? "6px" : "12px",
         paddingTop: "20px",
         paddingBottom: "20px",
-        color: "#fff",
+        color: darkGrey,
         textDecoration: "none",
         cursor: "pointer",
         fontSize: this.props.minified ? 12 : 16,
@@ -71,7 +71,7 @@ class TitleBar extends React.Component {
         paddingRight: "8px",
         paddingTop: "20px",
         paddingBottom: "20px",
-        color: "#fff",
+        color: darkGrey,
         textDecoration: "none",
         fontSize: this.props.minified ? 12 : 16
       },
@@ -84,7 +84,7 @@ class TitleBar extends React.Component {
       dataName: {
         alignSelf: "center",
         padding: "0px",
-        color: "#fff",
+        color: darkGrey,
         textDecoration: "none",
         fontSize: 20,
         fontWeight: 400

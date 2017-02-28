@@ -1,7 +1,7 @@
 import React from "react";
 import { connect } from "react-redux";
 import { titleColors } from "../../util/globals";
-import { titleStyles, titleFont, medGrey } from "../../globalStyles";
+import { titleStyles, titleFont, medGrey, darkGrey } from "../../globalStyles";
 import Radium from "radium";
 
 @connect((state) => {
@@ -46,7 +46,7 @@ class Title extends React.Component {
   createTitle() {
     const title = "nextstrain";
     return title.split("").map((letter, i) =>
-      <span key={i} style={{color: this.props.minified ? "#fff" : titleColors[i] }}>{letter}</span>
+      <span key={i} style={{color: this.props.minified ? darkGrey : titleColors[i] }}>{letter}</span>
     );
   }
   render() {
